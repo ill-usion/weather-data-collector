@@ -1,0 +1,42 @@
+### Test Endpoint ###
+GET http://127.0.0.1:4567/test HTTP/1.1
+
+### Timestamp ###
+
+GET http://127.0.0.1:4567/timestamp HTTP/1.1
+
+### Post Dummy Data ###
+
+POST http://127.0.0.1:4567/batch-submit HTTP/1.1
+Content-Content-Type: application/json
+
+
+{
+    "entries": [
+        { "timestamp": "{{$timestamp}}", "temp1": "{{$randomInt 15 45}}", "temp2": "{{$randomInt 17 40}}", "pressure": "{{$randomInt 2700 3000}}", "humidity": "{{$randomInt 50 90}}", "heat_index": "{{$randomInt 20 50}}", "battery": "{{$randomInt 20 99}}" }
+    ]
+}
+
+### Post Dummy Data (Invalid arguments)
+POST http://127.0.0.1:4567/batch-submit HTTP/1.1
+Content-Content-Type: application/json
+
+# misspelled timestamp
+{
+    "entries": [
+        { "tiemstamp": "{{$timestamp}}", "temp1": "{{$randomInt 15 45}}", "temp2": "{{$randomInt 17 40}}", "pressure": "{{$randomInt 2700 3000}}", "humidity": "{{$randomInt 50 90}}", "heat_index": "{{$randomInt 20 50}}", "battery": "{{$randomInt 20 99}}" }
+    ]
+}
+
+### Post Dummy Data (Missing entries)
+POST http://127.0.0.1:4567/batch-submit HTTP/1.1
+Content-Content-Type: application/json
+
+{
+}
+
+### Get Latest Data ###
+GET http://127.0.0.1:4567/get-latest?n=10 HTTP/1.1
+
+### Get Latest Data (Invalid argument) ###
+GET http://127.0.0.1:4567/get-latest?n=asd HTTP/1.1
