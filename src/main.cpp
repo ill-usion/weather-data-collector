@@ -10,13 +10,14 @@
 #include <HTTPClient.h>
 
 #include <ArduinoJson.h>
+#include "secrets.h"
 
 /* Parameters */
 
 // WiFi Credentials
-const char *WIFI_SSID = "";
-const char *WIFI_PASS = "";
-const String SERVER_ENDPOINT = "http://192.168.8.167:4567";
+const char *WIFI_SSID = _WIFI_SSID;
+const char *WIFI_PASS = _WIFI_PASS;
+const String SERVER_ENDPOINT = _SERVER_ENDPOINT;
 
 // Number of sensor readings to batch before posting to server
 const int BATCH_SIZE = 5;
