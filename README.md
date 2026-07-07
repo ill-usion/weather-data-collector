@@ -9,3 +9,5 @@ A local weather data collector that aims to be low-power and self-sustaining. It
     </br>
     <small>Seeed XIAO ESP32 C3 is used in the diagram instead of the supermini.</small>
 </p>
+
+Note that an array of solar panels are wired to the TP4056 charging module input.
