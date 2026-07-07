@@ -15,7 +15,11 @@ You will need the following components:
 |Switch|1|Anything that can turn the power on/off|
 |1M ohm resistor|2|For the voltage divider|
 |100nF ceramic capacitor|1|Used in the voltage divider|
-|65x65 solar panel|4|Or anything that can charge the battery
+|65x65 solar panel|4|Or anything that can charge the battery|
+|TP4056 charging module|1|For battery protection|
+|18650 3.7v battery|1|Powers up the system|
+|18650 battery holder|1| - |
+
 
 <p align="center">
     <img src="./schematic.jpg" width=700>
