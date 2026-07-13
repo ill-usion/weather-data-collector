@@ -20,8 +20,8 @@ function fmtDate(timestamp) {
 
 document.addEventListener("DOMContentLoaded", async () => {
     var latestData = await fetchLatest(readings_per_hour * 24);
-    latestData = latestData.reverse();
     var latestDataH = latestData.slice(0, readings_per_hour * 1);
+    latestData = latestData.reverse();
 
     new Chart(canvLatestH, {
         type: "line",
