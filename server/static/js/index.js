@@ -20,8 +20,8 @@ function fmtDate(timestamp) {
 
 document.addEventListener("DOMContentLoaded", async () => {
     var latestData = await fetchLatest(readings_per_hour * 24);
-    var latestDataH = latestData.slice(0, readings_per_hour * 1);
     latestData = latestData.reverse();
+    var latestDataH = latestData.slice(latestData.length - readings_per_hour * 1, -1);
 
     new Chart(canvLatestH, {
         type: "line",
@@ -29,15 +29,15 @@ document.addEventListener("DOMContentLoaded", async () => {
             labels: latestDataH.map((r) => fmtDate(r.timestamp)),
             datasets: [
                 {
-                    label: "Temperature",
+                    label: "Temperature (C)",
                     data: latestDataH.map((r) => r.temp1),
                 },
                 {
-                    label: "Humidity",
+                    label: "Humidity (%)",
                     data: latestDataH.map((r) => r.humidity),
                 },
                 {
-                    label: "Heat Index",
+                    label: "Heat Index (C)",
                     data: latestDataH.map((r) => r.heat_index),
                 },
             ],
@@ -58,40 +58,27 @@ document.addEventListener("DOMContentLoaded", async () => {
             datasets: [
                 {
                     tension: 0.5,
-                    label: "Temperature",
+                    label: "Temperature (C)",
                     data: latestData.map((r) => r.temp1),
+                    yAxisID: 'y',
                 },
                 {
                     tension: 0.5,
-                    label: "Humidity",
+                    label: "Humidity (%)",
                     data: latestData.map((r) => r.humidity),
+                    yAxisID: 'y',
                 },
                 {
                     tension: 0.5,
-                    label: "Heat Index",
+                    label: "Heat Index (C)",
                     data: latestData.map((r) => r.heat_index),
+                    yAxisID: 'y',
                 },
-            ],
-        },
-        options: {
-            scales: {
-                y: {
-                    beginAtZero: false,
-                },
-            },
-        },
-    });
-
-    new Chart(canvLatestPres, {
-        type: "line",
-        data: {
-            labels: latestData.map((r) => fmtDate(r.timestamp)),
-            datasets: [
                 {
                     tension: 0.5,
-                    label: "Heat Index",
                     label: "Pressure (mb)",
                     data: latestData.map((r) => r.pressure),
+                    yAxisID: 'y1',
                 },
             ],
         },
@@ -99,6 +86,21 @@ document.addEventListener("DOMContentLoaded", async () => {
             scales: {
                 y: {
                     beginAtZero: false,
+                    ticks: {
+                        callback: function (value, index, ticks) {
+                            (0.0).toP;
+                            return `${value}`;
+                        },
+                    },
+                },
+                y1: {
+                    beginAtZero: false,
+                    position: "right",
+                    ticks: {
+                        callback: function (value, index, ticks) {
+                            return `${value}mb`;
+                        },
+                    },
                 },
             },
         },
