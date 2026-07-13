@@ -2,9 +2,10 @@ import time
 import json
 import pandas as pd
 import sqlite3
-from flask import Flask, request,g 
+from flask import Flask, request, g, render_template
 
 app = Flask(__name__)
+app.template_folder = "static"
 DB_PATH = "./weather.db"
 
 
@@ -32,6 +33,9 @@ def close_db_conn(exception):
     if db is not None:
         db.close()
 
+@app.get("/")
+def dashboard():
+    return render_template("index.html")
 
 @app.get("/test")
 def test():
