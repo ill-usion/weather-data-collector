@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style/bootstrap.min.css') }}">
+    <script src="{{ url_for('static', filename='js/chart.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/index.js') }}" defer></script>
+    <style>
+        .sec {
+            margin-bottom: 3rem;
+        }
+    </style>
+</head>
+
+<body>
+    <main class="container">
+        <h1 class="text-center mt-3">Latest Weather Data</h1>
+        <div class="sec">
+            <h3>Latest Hour</h3>
+            <canvas id="canv-latest-hour"></canvas>
+        </div>
+        <div class="sec">
+            <h3>Latest 24h</h3>
+            <canvas id="canv-latest"></canvas>
+        </div>
+
+        <div class="sec">
+            <h3>Pressure Past 24h</h3>
+            <canvas id="canv-latest-pressure"></canvas>
+        </div>
+
+        <div class="sec">
+            <h3>Battery % vs Temperature</h3>
+            <canvas id="canv-latest-voltage"></canvas>
+        </div>
+    </main>
+</body>
+
+</html>
