@@ -101,6 +101,9 @@ document.addEventListener("DOMContentLoaded", async () => {
                             return `${value}mb`;
                         },
                     },
+                    grid: {
+                        drawOnChartArea: false
+                    }
                 },
             },
         },
