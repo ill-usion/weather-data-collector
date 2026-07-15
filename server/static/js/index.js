@@ -18,6 +18,12 @@ function fmtDate(timestamp) {
     return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
+function calcSoc(v) {
+    const v_cutoff = 2.5;
+    const v_full = 4.2;
+    return ((clamp(v, v_cutoff, v_full) - v_cutoff) / (v_full - v_cutoff)) * 100
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
     var latestData = await fetchLatest(readings_per_hour * 24);
     latestData = latestData.reverse();
@@ -118,7 +124,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     tension: 0.5,
                     label: "Battery %",
                     data: latestData.map(
-                        (r) => (clamp(r.battery, 0, 4.2) / 4.2) * 100.0,
+                        (r) => calcSoc(r.battery),
                     ),
                     yAxisID: "y",
                 },
