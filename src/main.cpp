@@ -20,7 +20,7 @@ const char *WIFI_PASS = _WIFI_PASS;
 const String SERVER_ENDPOINT = _SERVER_ENDPOINT;
 
 // Number of sensor readings to batch before posting to server
-const int BATCH_SIZE = 5;
+const int BATCH_SIZE = 6;
 // Number of times to attempt to post data before going to deep sleep
 const int MAX_POST_TRIES = 5;
 const uint64_t S_TO_US = 1000000;
@@ -47,6 +47,7 @@ DHT dht(DHT_PIN, DHT22);
 
 // Persistent data across deep sleep cycles
 RTC_DATA_ATTR uint64_t timestamp;
+RTC_DATA_ATTR uint64_t lastSleepDuration;
 RTC_DATA_ATTR size_t numReadings = 0;
 RTC_DATA_ATTR SensorData sensorReadings[BATCH_SIZE];
 
@@ -83,7 +84,7 @@ void setup()
 
 	if (!updateTimestamp())
 	{
-		goToSleep(DEEPSLEEP_DURATION);
+		goToSleep(DEEPSLEEP_DURATION - delayAmountMs * 1000);
 	}
 
 	// Should not post = get more readings
@@ -108,7 +109,7 @@ void loop()
 		{
 			updateTimestamp(true);
 			numReadings = 0;
-			goToSleep(DEEPSLEEP_DURATION);
+			goToSleep(DEEPSLEEP_DURATION - delayAmountMs * 1000);
 		}
 		else
 		{
@@ -117,7 +118,7 @@ void loop()
 	}
 	else
 	{
-		goToSleep(DEEPSLEEP_DURATION);
+		goToSleep(DEEPSLEEP_DURATION - delayAmountMs * 1000);
 	}
 
 	trackedDelay(1000);
@@ -184,6 +185,8 @@ void dryRunSensors(uint32_t n, uint32_t intervalMs)
 
 void goToSleep(uint64_t amount)
 {
+	lastSleepDuration = amount;
+
 	pinMode(8, OUTPUT);
 	digitalWrite(8, HIGH);
 	delay(500);
@@ -244,7 +247,7 @@ bool updateTimestamp(bool syncFromServer)
 	if (!syncFromServer && esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER)
 	{
 		// Woke up from deepsleep
-		timestamp += (DEEPSLEEP_DURATION * ( 1.0 / S_TO_US) + (delayAmountMs / 1000)); // + time wasted
+		timestamp += (lastSleepDuration * ( 1.0 / S_TO_US) + (delayAmountMs / 1000)); // + time wasted
 		return true;
 	}
 	else
