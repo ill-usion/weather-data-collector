@@ -8,9 +8,18 @@
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
+#include <ccronexpr.h>
 
 #include <ArduinoJson.h>
 #include "secrets.h"
+
+// #define STATION_DEBUG
+
+#ifdef STATION_DEBUG
+#define DEBUG_PRINTF(...) Serial.printf(__VA_ARGS__)
+#else
+#define DEBUG_PRINTF(...)
+#endif
 
 /* Parameters */
 
@@ -35,6 +44,8 @@ const int VBAT_PIN = 4;
 const float DIVIDER_RATIO = 2.0; // 1M + 1M
 const int BAT_SAMPLES = 10;
 
+const char *schedule = "* */10 * * * *"; // Every 10 minutes
+
 typedef struct
 {
 	float temp1, temp2, humidity, pressure, heatIndex, battery;
@@ -46,8 +57,8 @@ BME280I2C bmp;
 DHT dht(DHT_PIN, DHT22);
 
 // Persistent data across deep sleep cycles
-RTC_DATA_ATTR uint64_t timestamp;
-RTC_DATA_ATTR uint64_t lastSleepDuration;
+RTC_DATA_ATTR uint64_t timestamp; // in seconds
+RTC_DATA_ATTR uint64_t lastSleepDurationUs;
 RTC_DATA_ATTR size_t numReadings = 0;
 RTC_DATA_ATTR SensorData sensorReadings[BATCH_SIZE];
 
@@ -56,6 +67,7 @@ SensorData data;
 int tryCount;
 uint64_t delayAmountMs;
 bool shouldPost = false;
+cron_expr cronExpr;
 
 void trackedDelay(uint64_t amount);
 bool connectToWiFi(uint32_t maxRetries = 10);
@@ -63,6 +75,7 @@ void initSensors();
 SensorData readSensors();
 void dryRunSensors(uint32_t n = 10, uint32_t intervalMs = 10);
 void goToSleep(uint64_t amount);
+void sleepUntilNextTask();
 float readBatteryVoltage();
 uint64_t requestTimestamp();
 bool updateTimestamp(bool syncFromServer = false);
@@ -70,13 +83,25 @@ bool postBatch(SensorData *data, size_t n);
 
 void setup()
 {
+#ifdef STATION_DEBUG
+	Serial.begin(SERIAL_BAUD);
+	trackedDelay(3000);
+
+	// while (!Serial)
+	// 	;
+#endif
+
+	const char *error;
+	cron_parse_expr(schedule, &cronExpr, &error);
+	if (error != NULL)
+	{
+		while (true)
+			DEBUG_PRINTF("Error parsing cron expression: %s\n", error);
+	}
+
 	tryCount = 0;
 	delayAmountMs = 0;
 	shouldPost = numReadings >= BATCH_SIZE;
-
-	Serial.begin(SERIAL_BAUD);
-	while (!Serial)
-		;
 
 	// WiFi will be connected to on demand later on inside function calls
 	initSensors();
@@ -84,15 +109,18 @@ void setup()
 
 	if (!updateTimestamp())
 	{
-		goToSleep(DEEPSLEEP_DURATION - delayAmountMs * 1000);
+		DEBUG_PRINTF("Failed to update timestamp from server, going to sleep...\n");
+		sleepUntilNextTask();
 	}
 
 	// Should not post = get more readings
 	if (!shouldPost)
 	{
 		// Sample sensors a few times to get a more accurate reading
+		DEBUG_PRINTF("Dry running sensors...\n");
 		dryRunSensors();
 
+		DEBUG_PRINTF("Reading sensors...\n");
 		data = readSensors();
 		sensorReadings[numReadings++] = data;
 		shouldPost = numReadings >= BATCH_SIZE;
@@ -104,21 +132,25 @@ void loop()
 	// Serial.printf("Temperature1: %.2fC, Temperature2: %.2f, Humidity: %.2f%%, Pressure: %.2fhPa, HI: %.2fC, Battery: %.2fV\n", data.temp1, data.temp2, data.humidity, data.pressure, data.heatIndex, data.battery);
 	if (shouldPost)
 	{
+		DEBUG_PRINTF("Posting batch of %d readings to server...\n", numReadings);
 		bool success = postBatch(sensorReadings, numReadings);
 		if (success || tryCount >= MAX_POST_TRIES)
 		{
+			DEBUG_PRINTF("Posted batch successfully, going to sleep...\n");
 			updateTimestamp(true);
 			numReadings = 0;
-			goToSleep(DEEPSLEEP_DURATION - delayAmountMs * 1000);
+			sleepUntilNextTask();
 		}
 		else
 		{
+			DEBUG_PRINTF("Failed to post batch (try %d/%d)\n", tryCount + 1, MAX_POST_TRIES);
 			tryCount++;
 		}
 	}
 	else
 	{
-		goToSleep(DEEPSLEEP_DURATION - delayAmountMs * 1000);
+		DEBUG_PRINTF("Not enough readings to post, going to sleep...\n");
+		sleepUntilNextTask();
 	}
 
 	trackedDelay(1000);
@@ -137,7 +169,7 @@ bool connectToWiFi(uint32_t maxRetries)
 	while (WiFi.status() != WL_CONNECTED && tries < maxRetries)
 	{
 		WiFi.begin(WIFI_SSID, WIFI_PASS);
-		Serial.printf("Attempt %d: Connecting to Wi-Fi...", tries + 1);
+		DEBUG_PRINTF("Attempt %d: Connecting to Wi-Fi...\n", tries + 1);
 		trackedDelay(3000);
 		tries++;
 	}
@@ -183,13 +215,13 @@ void dryRunSensors(uint32_t n, uint32_t intervalMs)
 	}
 }
 
-void goToSleep(uint64_t amount)
+void goToSleep(uint64_t amountUs)
 {
-	lastSleepDuration = amount;
+	lastSleepDurationUs = amountUs;
 
 	pinMode(8, OUTPUT);
 	digitalWrite(8, HIGH);
-	delay(500);
+	trackedDelay(500);
 	digitalWrite(8, LOW);
 
 	WiFi.disconnect(true);
@@ -201,8 +233,30 @@ void goToSleep(uint64_t amount)
 	gpio_hold_en(GPIO_NUM_19);
 	gpio_deep_sleep_hold_en();
 
-	esp_sleep_enable_timer_wakeup(amount);
+	esp_sleep_enable_timer_wakeup(amountUs);
 	esp_deep_sleep_start();
+}
+
+void sleepUntilNextTask()
+{
+	DEBUG_PRINTF("Current timestamp=%llu\n", timestamp);
+	// Roll to the next minute to avoid cron library rescheduling the same timestamp
+	time_t now = (int64_t)timestamp + 60;
+	time_t next = cron_next(&cronExpr, now);
+	if (next == ((time_t)-1))
+	{
+		DEBUG_PRINTF("Error calculating next cron time\n");
+		goToSleep(DEEPSLEEP_DURATION - delayAmountMs * 1000);
+	}
+	// now and next are overflowing uint64_t values, so we need to cast them to int64_t
+	DEBUG_PRINTF("Scheduled sleep: Current timestamp=%lld, Next cron timestamp=%lld\n", (int64_t)now, (int64_t)next);
+	uint64_t sleepDurationUs = ((uint64_t)(next - now + 60)) * S_TO_US; // + 60 to compensate for the rolling to the next minute above
+	uint64_t offsetUs = delayAmountMs * 1000;
+	if (sleepDurationUs > offsetUs)
+		sleepDurationUs -= offsetUs; // Subtract time wasted in delay
+	
+	DEBUG_PRINTF("Going to sleep for %llu seconds\n", sleepDurationUs / S_TO_US);
+	goToSleep(sleepDurationUs);
 }
 
 float readBatteryVoltage()
@@ -247,7 +301,8 @@ bool updateTimestamp(bool syncFromServer)
 	if (!syncFromServer && esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER)
 	{
 		// Woke up from deepsleep
-		timestamp += (lastSleepDuration * ( 1.0 / S_TO_US) + (delayAmountMs / 1000)); // + time wasted
+		timestamp += (lastSleepDurationUs / S_TO_US);
+		timestamp += (delayAmountMs / 1000);
 		return true;
 	}
 	else
