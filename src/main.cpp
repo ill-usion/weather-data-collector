@@ -1,7 +1,6 @@
 #include <Arduino.h>
 #include "secrets.h"
 
-#define STATION_DEBUG
 #include "WeatherStation.h"
 
 // WiFi Credentials
@@ -39,7 +38,7 @@ void setup()
 {
 #ifdef STATION_DEBUG
 	Serial.begin(SERIAL_BAUD);
-	tk.delay(3000);
+	tk.delayMs(3000);
 
 	// while (!Serial)
 	// 	;
@@ -59,11 +58,14 @@ void setup()
 		&numReadings,
 		&bmp, &dht, &bat);
 
-	if (!success)
+	while (!success)
 	{
 		DEBUG_PRINTF("Station setup failed\n");
-		tk.delay(1000);
+		tk.delayMs(1000);
+		station.sleepUntilNextTask();
 	}
+
+	DEBUG_PRINTF("Station setup succeeded\n");
 }
 
 void loop()

@@ -179,7 +179,7 @@ void WeatherStation::initSensors()
 {
     Wire.begin();
     while (!m_bmp->begin())
-        tk.delay(10);
+        tk.delayMs(10);
 
     m_dht->begin();
 }
@@ -255,7 +255,7 @@ bool WeatherStation::connectToWiFi()
     {
         WiFi.begin(m_ssid, m_pass);
         DEBUG_PRINTF("Attempt %d: Connecting to WiFi...\n", tries + 1);
-        tk.delay(1000);
+        tk.delayMs(1000);
         tries++;
     }
 
@@ -327,6 +327,6 @@ void WeatherStation::sleepUntilNextTask()
     if (sleepDurationUs > offsetUs)
         sleepDurationUs -= offsetUs; // Subtract time wasted in delay
 
-    DEBUG_PRINTF("Going to sleep for %llu seconds\n", sleepDurationUs / S_TO_US);
+    DEBUG_PRINTF("Going to sleep for %llu microseconds\n", sleepDurationUs);
     goToSleep(sleepDurationUs);
 }
