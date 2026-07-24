@@ -21,13 +21,13 @@ public:
     float read(uint32_t samples = 10)
     {
         analogRead(m_vBatPin);
-        tk.delayMs(2);
+        tk.delay(2);
 
         uint32_t sum_mv = 0;
         for (int i = 0; i < samples; i++)
         {
             sum_mv += analogReadMilliVolts(m_vBatPin);
-            tk.delayMs(2);
+            tk.delay(2);
         }
 
         float vadc_mv = sum_mv / (float)samples;
