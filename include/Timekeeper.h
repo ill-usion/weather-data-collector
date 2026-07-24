@@ -16,7 +16,7 @@ public:
     /// @param amountMs Amount of time to wait in milliseconds
     void delay(uint64_t amountMs)
     {
-        m_delayUs += amountMs / 1000;
+        m_delayUs += amountMs * 1000;
         delay(amountMs);
     }
 
