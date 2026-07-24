@@ -113,7 +113,7 @@ bool WeatherStation::begin(
         // Logically we should not require an internet
         // connection since timestamp will be estimated
         _timestamp = getUpdatedTimestamp();
-        if (_timestamp != 0 || _timestamp == 1)
+        if (_timestamp == 0 || _timestamp == 1)
         {
             DEBUG_PRINTF("Code should not reach here.\n");
             return false;
