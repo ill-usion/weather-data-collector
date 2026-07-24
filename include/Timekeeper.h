@@ -14,10 +14,10 @@ public:
 
     /// @brief Delays for the specified amount of time and logs it
     /// @param amountMs Amount of time to wait in milliseconds
-    void delay(uint64_t amountMs)
+    void delayMs(uint64_t amountMs)
     {
         m_delayUs += amountMs * 1000;
-        delay(amountMs);
+        ::delay(amountMs);
     }
 
     /// @brief Delays for the spcified amount of time and logs it
@@ -25,7 +25,7 @@ public:
     void delayUs(uint64_t amountUs)
     {
         m_delayUs += amountUs;
-        delayMicroseconds(amountUs);
+        ::delayMicroseconds(amountUs);
     }
 
     /// @brief Time wasted in delay
