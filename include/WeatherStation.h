@@ -98,6 +98,9 @@ public:
     /// @brief Executes the station routine
     void loop();
 
+    /// @brief Calculates the time left until next task specified by cron expression and sleeps for that amount
+    void sleepUntilNextTask();
+
 private:
     /// @brief Initializes the sensors (BME280 and DHT22)
     void initSensors();
@@ -126,7 +129,4 @@ private:
     /// @brief Puts the station into deep sleep mode and sets up a wake up timer
     /// @param amountUs Amount of time to deep sleep for in microseconds
     void goToSleep(uint64_t amountUs);
-
-    /// @brief Calculates the time left until next task specified by cron expression and sleeps for that amount
-    void sleepUntilNextTask();
 };
