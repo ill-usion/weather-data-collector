@@ -28,7 +28,7 @@
 // 10 minutes
 #define DEEPSLEEP_FALLBACK_DURATION (10 * 60 * 1e6)
 
-typedef struct
+typedef struct __attribute__((__packed__))
 {
     float temp1, temp2, humidity, pressure, heatIndex, battery;
     uint64_t timestamp;
