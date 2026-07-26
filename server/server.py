@@ -2,11 +2,13 @@ import time
 import json
 import pandas as pd
 import sqlite3
+import struct
 from flask import Flask, request,g 
 
 app = Flask(__name__)
 DB_PATH = "./weather.db"
-
+# Each sensor data chunk is 32 bytes long
+CHUNK_SIZE = 32
 
 def get_db():
     db = getattr(g, "_database", None)
@@ -31,6 +33,32 @@ def close_db_conn(exception):
     db = getattr(g, "_database", None)
     if db is not None:
         db.close()
+
+def parse_chunk(chunk):
+    if len(chunk) != CHUNK_SIZE:
+        raise ValueError(f"Chunk length is not equal to {CHUNK_SIZE}")
+
+    temp1 = struct.unpack('f', chunk[0:4])[0]
+    temp1 = struct.unpack('f', chunk[4:8])[0]
+    humidity = struct.unpack('f', chunk[8:12])[0]
+    pressure = struct.unpack('f', chunk[12:16])[0]
+    heat_index = struct.unpack('f', chunk[16:20])[0]
+    battery = struct.unpack('f', chunk[20:24])[0]
+    timestamp = struct.unpack('Q', chunk[24:32])[0]
+
+    return (timestamp, temp1, temp2, pressure, humidity, heat_index, battery)
+
+
+def parse_binary_data(_bytes):
+    if len(_bytes) % CHUNK_SIZE != 0:
+        raise ValueError(f"Data length is not divisible by {CHUNK_SIZE}")
+
+    entries = []
+    for i in range(0, len(_bytes), CHUNK_SIZE):
+        chunk = _bytes[i:i + CHUNK_SIZE]
+        entries.append(parse_chunk(chunk)) 
+
+    return entries
 
 
 @app.get("/test")
@@ -62,6 +90,24 @@ def batch_submit():
             return f"Bad data: {e}", 400
 
         db.commit()
+        return "", 204
+
+@app.post("/binary-submit")
+def binary_submit():
+    with app.app_context():
+        # db = get_db()
+        # cur = db.cursor()
+        data = request.get_data()
+        with open(f"{int(time.time())}-data.bin", "wb") as f:
+            f.write(data)
+        # try:
+        #     entries = parse_binary_data(data)
+        #     print(entries)
+        #     cur.executemany("INSERT INTO weather VALUES(?, ?, ?, ?, ?, ?, ?)", entries)
+        # except Exception as e:
+        #     return f"Bad data: {e}", 400
+
+        # db.commit()
         return "", 204
 
 
