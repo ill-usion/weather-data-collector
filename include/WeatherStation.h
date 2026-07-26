@@ -16,6 +16,7 @@
 
 #include "BatteryReader.h"
 #include "Timekeeper.h"
+#include "DataStore.h"
 
 // #define STATION_DEBUG
 
@@ -27,6 +28,7 @@
 
 // 10 minutes
 #define DEEPSLEEP_FALLBACK_DURATION (10 * 60 * 1e6)
+#define DATASTORE_FILENAME "readings.bin"
 
 typedef struct __attribute__((__packed__))
 {
@@ -58,7 +60,9 @@ private:
     int m_postTryCount;
     bool m_shouldPost;
     bool m_recodedReadings;
+    bool m_addedBatchToFile;
     cron_expr m_cronExpr;
+    DataStore m_dataStore;
 
 public:
     WeatherStation() {}
@@ -125,6 +129,11 @@ private:
     /// @brief Posts the readings present in member variables
     /// @return If posting succeeded
     bool postBatch();
+
+    /// @brief Posts the buffered readings file
+    /// @param file Readings file
+    /// @return If posting succeeded
+    bool postReadingsFile(File *file);
 
     /// @brief Puts the station into deep sleep mode and sets up a wake up timer
     /// @param amountUs Amount of time to deep sleep for in microseconds

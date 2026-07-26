@@ -30,6 +30,7 @@ bool WeatherStation::begin(
     m_bmp = bmp;
     m_dht = dht;
     m_bat = bat;
+    m_dataStore = DataStore::open(DATASTORE_FILENAME);
 
     if (m_timestamp == NULL)
     {
@@ -83,6 +84,7 @@ bool WeatherStation::begin(
     m_postTryCount = 0;
     m_shouldPost = (*m_numReadings) >= m_batchSize;
     m_recodedReadings = false;
+    m_addedBatchToFile = false;
 
     initSensors();
 
@@ -127,39 +129,77 @@ bool WeatherStation::begin(
 
 void WeatherStation::loop()
 {
+    // Check if we exceeded the trial limit
     if (m_postTryCount >= m_maxPostTries)
     {
-        // TODO: log readings to file
+        m_dataStore.store((uint8_t *)m_readings, sizeof(SensorData) * (*m_numReadings));
         *m_numReadings = 0;
-        DEBUG_PRINTF("Exceeded max post tries. Going to sleep...\n");
+        DEBUG_PRINTF("Exceeded max post tries. Logged readings into data store. Going to sleep...\n");
         sleepUntilNextTask();
     }
 
+    // Check if we should post data
     if (m_shouldPost)
     {
         m_postTryCount++;
         DEBUG_PRINTF("Attempt %d: ", m_postTryCount);
+
+        // Attempt to connect to WiFi
         if (WiFi.status() != WL_CONNECTED && !connectToWiFi())
         {
             DEBUG_PRINTF("Could not connect to WiFi.\n");
             return;
         }
 
-        bool success = postBatch();
-        if (!success)
+        // Check if there is any buffered data and attempt to post it
+        if (m_dataStore.size() > 0)
         {
-            DEBUG_PRINTF("Failed to post batch.\n");
-            return;
+            // Add the current batch to data store
+            if (!m_addedBatchToFile)
+            {
+                m_dataStore.store((uint8_t *)m_readings, sizeof(SensorData) * (*m_numReadings));
+                *m_numReadings = 0;
+                m_addedBatchToFile = true;
+            }
+
+            // Try and post the data
+            File *f = m_dataStore.getFilePtr();
+            bool success = postReadingsFile(f);
+            if (!success)
+            {
+                DEBUG_PRINTF("Failed to post readings file.\n");
+                return;
+            }
+
+            DEBUG_PRINTF("Successfully posted readings file of size %d bytes.\n", f->size());
+            // Clear data store after successful post
+            m_dataStore.clear();
+        }
+        // Otherwise post the current batch
+        else
+        {
+            bool success = postBatch();
+            if (!success)
+            {
+                DEBUG_PRINTF("Failed to post batch.\n");
+                return;
+            }
+
+            DEBUG_PRINTF("Successfully posted batch of %d readings.\n", *m_numReadings);
+            // Clear batch after successful post
+            *m_numReadings = 0;
         }
 
-        DEBUG_PRINTF("Posted %d readings to server.\n", *m_numReadings);
+        // Everything succeeded
+        // Update timestamp fromserver
         uint64_t _timestamp = getUpdatedTimestamp(true);
         if (_timestamp != 0 || _timestamp != 1)
             *m_timestamp = _timestamp;
 
-        *m_numReadings = 0;
+        // Sleep until next routine
         sleepUntilNextTask();
     }
+    // Have not recorded readings this routine
     else if (!m_recodedReadings)
     {
         m_reading = readSensors();
@@ -168,6 +208,7 @@ void WeatherStation::loop()
         m_recodedReadings = true;
         m_shouldPost = (*m_numReadings) >= m_batchSize;
     }
+    // None of the above tasks are required
     else
     {
         DEBUG_PRINTF("Nothing to do. Going to sleep...\n");
@@ -287,6 +328,21 @@ bool WeatherStation::postBatch()
     HTTPClient client;
     client.begin(m_api + "/batch-submit");
     int code = client.POST(doc.as<String>());
+
+    return code == 204;
+}
+
+bool WeatherStation::postReadingsFile(File *file)
+{
+    if (WiFi.status() != WL_CONNECTED)
+    {
+        DEBUG_PRINTF("Failed to post readings file. No internet connection.\n");
+        return false;
+    }
+
+    HTTPClient client;
+    client.begin(m_api + "/binary-submit");
+    int code = client.sendRequest("POST", file, file->size());
 
     return code == 204;
 }
