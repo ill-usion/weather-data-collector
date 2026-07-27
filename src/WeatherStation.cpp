@@ -31,15 +31,17 @@ bool WeatherStation::begin(
     m_dht = dht;
     m_bat = bat;
 
+    // Mount filesystem
     uint32_t fsMountTries = 0;
     const uint32_t MAX_FS_MOUNT_TRIES = 5;
-    while (!LittleFS.begin(true) && fsMountTries < MAX_FS_MOUNT_TRIES)
+    bool mounted = false;
+    while ((mounted = LittleFS.begin(true)) == false && fsMountTries < MAX_FS_MOUNT_TRIES)
     {
         tk.delayMs(100);
         fsMountTries++;
     }
 
-    if (fsMountTries == MAX_FS_MOUNT_TRIES)
+    if (mounted == false)
     {
         DEBUG_PRINTF("Failed to mount LittleFS\n");
         return false;
@@ -390,7 +392,7 @@ void WeatherStation::goToSleep(uint64_t amountUs)
 
 void WeatherStation::sleepUntilNextTask()
 {
-    if (m_timestamp == 0  || m_timestamp == NULL)
+    if (m_timestamp == 0 || m_timestamp == NULL)
     {
         DEBUG_PRINTF("Cannot schedule next task. Sleeping for fallback duration.\n");
         goToSleep(DEEPSLEEP_FALLBACK_DURATION - tk.getWastedTimeUs());
