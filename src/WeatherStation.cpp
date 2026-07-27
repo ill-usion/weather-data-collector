@@ -106,7 +106,7 @@ bool WeatherStation::begin(
     m_recodedReadings = false;
     m_addedBatchToFile = false;
 
-    initSensors();
+    initSensors(); //
 
     uint64_t _timestamp;
     esp_sleep_wakeup_cause_t wakeupCause = esp_sleep_get_wakeup_cause();
@@ -150,7 +150,7 @@ bool WeatherStation::begin(
 void WeatherStation::loop()
 {
     // Check if we exceeded the trial limit
-    if (m_postTryCount >= m_maxPostTries)
+    if (m_postTryCount > m_maxPostTries) // omit equality to catch an edge case where m_maxPostTries = 0
     {
         if (!m_addedBatchToFile)
         {
@@ -245,6 +245,7 @@ void WeatherStation::loop()
 void WeatherStation::initSensors()
 {
     Wire.begin();
+    // TODO: add fail safe to prevent infinte loops
     while (!m_bmp->begin())
         tk.delayMs(10);
 
@@ -363,6 +364,12 @@ bool WeatherStation::postReadingsFile(File *file)
     if (WiFi.status() != WL_CONNECTED)
     {
         DEBUG_PRINTF("Failed to post readings file. No internet connection.\n");
+        return false;
+    }
+
+    if (file == NULL)
+    {
+        DEBUG_PRINTF("Failed to post readings file. File is null.\n");
         return false;
     }
 

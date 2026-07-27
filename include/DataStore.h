@@ -52,10 +52,10 @@ public:
     size_t store(uint8_t *data, size_t len)
     {
         int seekPos = -1;
-
+        bool isOverflowing = len > LittleFS.totalBytes() - LittleFS.usedBytes();
         // Serial.printf("Total bytes: %d, Used bytes: %d, Free bytes: %d\n", LittleFS.totalBytes(), LittleFS.usedBytes(), LittleFS.totalBytes() - LittleFS.usedBytes());
         // Serial.printf("Data length: %d\n", len);
-        if (len > LittleFS.totalBytes() - LittleFS.usedBytes())
+        if (isOverflowing)
         {
             if (m_overflowBehavior == OverflowBehavior::Clear)
             {
@@ -81,9 +81,12 @@ public:
         size_t written = writer.write(data, len);
         writer.close();
 
-        if (written > 0 && m_overflowBehavior == OverflowBehavior::Overwrite)
+        if (isOverflowing &&
+            seekPos != -1 &&
+            written > 0 &&
+            m_overflowBehavior == OverflowBehavior::Overwrite)
         {
-            size_t sz = this->size();
+            size_t sz = size();
             setOverwriteIdx((seekPos + written) % sz);
         }
 
