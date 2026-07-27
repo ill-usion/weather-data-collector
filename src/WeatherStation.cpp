@@ -30,6 +30,23 @@ bool WeatherStation::begin(
     m_bmp = bmp;
     m_dht = dht;
     m_bat = bat;
+
+    uint32_t fsMountTries = 0;
+    const uint32_t MAX_FS_MOUNT_TRIES = 5;
+    while (!LittleFS.begin(true) && fsMountTries < MAX_FS_MOUNT_TRIES)
+    {
+        tk.delayMs(100);
+        fsMountTries++;
+    }
+
+    if (fsMountTries == MAX_FS_MOUNT_TRIES)
+    {
+        DEBUG_PRINTF("Failed to mount LittleFS\n");
+        return false;
+    }
+
+    DEBUG_PRINTF("LittleFS mounted successfully\n");
+
     m_dataStore = DataStore::open(DATASTORE_FILENAME);
     DEBUG_PRINTF("Data store size: %d bytes\n", m_dataStore.size());
 
@@ -133,9 +150,14 @@ void WeatherStation::loop()
     // Check if we exceeded the trial limit
     if (m_postTryCount >= m_maxPostTries)
     {
-        size_t s = m_dataStore.store((uint8_t *)m_readings, sizeof(SensorData) * (*m_numReadings));
-        *m_numReadings = 0;
-        DEBUG_PRINTF("Exceeded max post tries. Logged %d bytes readings into data store. Going to sleep...\n", s);
+        if (!m_addedBatchToFile)
+        {
+            size_t s = m_dataStore.store((uint8_t *)m_readings, sizeof(SensorData) * (*m_numReadings));
+            *m_numReadings = 0;
+            DEBUG_PRINTF("Logged %d bytes of readings to data store. ", s);
+        }
+
+        DEBUG_PRINTF("Exceeded max post tries. Going to sleep...\n", s);
         sleepUntilNextTask();
     }
 
@@ -368,6 +390,12 @@ void WeatherStation::goToSleep(uint64_t amountUs)
 
 void WeatherStation::sleepUntilNextTask()
 {
+    if (m_timestamp == NULL)
+    {
+        DEBUG_PRINTF("Cannot schedule next task. Sleeping for fallback duration.\n");
+        goToSleep(DEEPSLEEP_FALLBACK_DURATION - tk.getWastedTimeUs());
+    }
+
     uint64_t timestamp = *m_timestamp;
     DEBUG_PRINTF("Current timestamp=%llu\n", timestamp);
     // Roll to the next minute to avoid cron library rescheduling the same timestamp

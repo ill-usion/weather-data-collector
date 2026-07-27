@@ -43,21 +43,6 @@ void setup()
 	// while (!Serial)
 	// 	;
 #endif
-	uint32_t fsMountTries = 0;
-	const uint32_t MAX_FS_MOUNT_TRIES = 5;
-	while (!LittleFS.begin(true) && fsMountTries < MAX_FS_MOUNT_TRIES)
-	{
-		tk.delayMs(1000);
-		fsMountTries++;
-	}
-
-	if (fsMountTries == MAX_FS_MOUNT_TRIES)
-	{
-		DEBUG_PRINTF("Failed to mount LittleFS\n");
-		return;
-	}
-
-	DEBUG_PRINTF("LittleFS mounted successfully\n");
 
 	bool success = station.begin(
 		WIFI_SSID,
@@ -76,7 +61,6 @@ void setup()
 	while (!success)
 	{
 		DEBUG_PRINTF("Station setup failed\n");
-		tk.delayMs(1000);
 		station.sleepUntilNextTask();
 	}
 
