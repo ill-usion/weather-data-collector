@@ -3,7 +3,7 @@ import json
 import pandas as pd
 import sqlite3
 import struct
-from flask import Flask, request,g 
+from flask import Flask, request, g, render_template 
 
 app = Flask(__name__)
 app.template_folder = "static"
