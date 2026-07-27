@@ -39,7 +39,7 @@ def parse_chunk(chunk):
         raise ValueError(f"Chunk length is not equal to {CHUNK_SIZE}")
 
     temp1 = struct.unpack('f', chunk[0:4])[0]
-    temp1 = struct.unpack('f', chunk[4:8])[0]
+    temp2 = struct.unpack('f', chunk[4:8])[0]
     humidity = struct.unpack('f', chunk[8:12])[0]
     pressure = struct.unpack('f', chunk[12:16])[0]
     heat_index = struct.unpack('f', chunk[16:20])[0]
@@ -95,19 +95,17 @@ def batch_submit():
 @app.post("/binary-submit")
 def binary_submit():
     with app.app_context():
-        # db = get_db()
-        # cur = db.cursor()
+        db = get_db()
+        cur = db.cursor()
         data = request.get_data()
-        with open(f"{int(time.time())}-data.bin", "wb") as f:
-            f.write(data)
-        # try:
-        #     entries = parse_binary_data(data)
-        #     print(entries)
-        #     cur.executemany("INSERT INTO weather VALUES(?, ?, ?, ?, ?, ?, ?)", entries)
-        # except Exception as e:
-        #     return f"Bad data: {e}", 400
+        try:
+            entries = parse_binary_data(data)
+            print(entries)
+            cur.executemany("INSERT INTO weather VALUES(?, ?, ?, ?, ?, ?, ?)", entries)
+        except Exception as e:
+            return f"Bad data: {e}", 400
 
-        # db.commit()
+        db.commit()
         return "", 204
 
 
