@@ -390,7 +390,7 @@ void WeatherStation::goToSleep(uint64_t amountUs)
 
 void WeatherStation::sleepUntilNextTask()
 {
-    if (m_timestamp == NULL)
+    if (m_timestamp == 0  || m_timestamp == NULL)
     {
         DEBUG_PRINTF("Cannot schedule next task. Sleeping for fallback duration.\n");
         goToSleep(DEEPSLEEP_FALLBACK_DURATION - tk.getWastedTimeUs());
