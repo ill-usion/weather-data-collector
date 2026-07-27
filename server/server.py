@@ -6,6 +6,7 @@ import struct
 from flask import Flask, request,g 
 
 app = Flask(__name__)
+app.template_folder = "static"
 DB_PATH = "./weather.db"
 # Each sensor data chunk is 32 bytes long
 CHUNK_SIZE = 32
@@ -60,6 +61,9 @@ def parse_binary_data(_bytes):
 
     return entries
 
+@app.get("/")
+def dashboard():
+    return render_template("index.html")
 
 @app.get("/test")
 def test():
