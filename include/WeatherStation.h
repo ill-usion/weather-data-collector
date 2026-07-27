@@ -28,7 +28,7 @@
 
 // 10 minutes
 #define DEEPSLEEP_FALLBACK_DURATION (10 * 60 * 1e6)
-#define DATASTORE_FILENAME "readings.bin"
+#define DATASTORE_FILENAME "/readings.bin"
 
 typedef struct __attribute__((__packed__))
 {

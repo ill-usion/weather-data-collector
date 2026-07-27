@@ -31,6 +31,7 @@ bool WeatherStation::begin(
     m_dht = dht;
     m_bat = bat;
     m_dataStore = DataStore::open(DATASTORE_FILENAME);
+    DEBUG_PRINTF("Data store size: %d bytes\n", m_dataStore.size());
 
     if (m_timestamp == NULL)
     {
@@ -132,9 +133,9 @@ void WeatherStation::loop()
     // Check if we exceeded the trial limit
     if (m_postTryCount >= m_maxPostTries)
     {
-        m_dataStore.store((uint8_t *)m_readings, sizeof(SensorData) * (*m_numReadings));
+        size_t s = m_dataStore.store((uint8_t *)m_readings, sizeof(SensorData) * (*m_numReadings));
         *m_numReadings = 0;
-        DEBUG_PRINTF("Exceeded max post tries. Logged readings into data store. Going to sleep...\n");
+        DEBUG_PRINTF("Exceeded max post tries. Logged %d bytes readings into data store. Going to sleep...\n", s);
         sleepUntilNextTask();
     }
 
@@ -163,15 +164,16 @@ void WeatherStation::loop()
             }
 
             // Try and post the data
-            File *f = m_dataStore.getFilePtr();
-            bool success = postReadingsFile(f);
+            File f = m_dataStore.getReader();
+            bool success = postReadingsFile(&f);
+            f.close();
             if (!success)
             {
                 DEBUG_PRINTF("Failed to post readings file.\n");
                 return;
             }
 
-            DEBUG_PRINTF("Successfully posted readings file of size %d bytes.\n", f->size());
+            DEBUG_PRINTF("Successfully posted readings file of size %d bytes.\n", f.size());
             // Clear data store after successful post
             m_dataStore.clear();
         }
