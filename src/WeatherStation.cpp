@@ -159,7 +159,7 @@ void WeatherStation::loop()
             DEBUG_PRINTF("Logged %d bytes of readings to data store. ", s);
         }
 
-        DEBUG_PRINTF("Exceeded max post tries. Going to sleep...\n", s);
+        DEBUG_PRINTF("Exceeded max post tries. Going to sleep...\n");
         sleepUntilNextTask();
     }
 
