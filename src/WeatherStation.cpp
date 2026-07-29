@@ -106,7 +106,9 @@ bool WeatherStation::begin(
     m_recodedReadings = false;
     m_addedBatchToFile = false;
 
-    initSensors(); //
+    initSensors();
+    esp_bt_controller_disable();
+    esp_wifi_set_max_tx_power(WIFI_POWER_11dBm);
 
     uint64_t _timestamp;
     esp_sleep_wakeup_cause_t wakeupCause = esp_sleep_get_wakeup_cause();
