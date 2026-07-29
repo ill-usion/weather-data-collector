@@ -138,4 +138,9 @@ private:
     /// @brief Puts the station into deep sleep mode and sets up a wake up timer
     /// @param amountUs Amount of time to deep sleep for in microseconds
     void goToSleep(uint64_t amountUs);
+
+    /// @brief Mounts LittleFS
+    /// @param maxTries Maximum number of tries to mount if mounting fails
+    /// @return If mounting succeeded
+    bool mountFs(uint32_t maxTries = 5);
 };

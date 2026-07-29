@@ -32,25 +32,25 @@ bool WeatherStation::begin(
     m_bat = bat;
 
     // Mount filesystem
-    uint32_t fsMountTries = 0;
-    const uint32_t MAX_FS_MOUNT_TRIES = 5;
-    bool mounted = false;
-    while ((mounted = LittleFS.begin(true)) == false && fsMountTries < MAX_FS_MOUNT_TRIES)
-    {
-        tk.delayMs(100);
-        fsMountTries++;
-    }
+    // uint32_t fsMountTries = 0;
+    // const uint32_t MAX_FS_MOUNT_TRIES = 5;
+    // bool mounted = false;
+    // while ((mounted = LittleFS.begin(true)) == false && fsMountTries < MAX_FS_MOUNT_TRIES)
+    // {
+    //     tk.delayMs(100);
+    //     fsMountTries++;
+    // }
 
-    if (mounted == false)
-    {
-        DEBUG_PRINTF("Failed to mount LittleFS\n");
-        return false;
-    }
+    // if (mounted == false)
+    // {
+    //     DEBUG_PRINTF("Failed to mount LittleFS\n");
+    //     return false;
+    // }
 
-    DEBUG_PRINTF("LittleFS mounted successfully\n");
+    // DEBUG_PRINTF("LittleFS mounted successfully\n");
 
+    // Does not require mounting the fs
     m_dataStore = DataStore::open(DATASTORE_FILENAME);
-    DEBUG_PRINTF("Data store size: %d bytes\n", m_dataStore.size());
 
     if (m_timestamp == NULL)
     {
@@ -169,6 +169,12 @@ void WeatherStation::loop()
         m_postTryCount++;
         DEBUG_PRINTF("Attempt %d: ", m_postTryCount);
 
+        if (!mountFs())
+        {
+            DEBUG_PRINTF("Could not mount filesystem.\n");
+            return;
+        }
+
         // Attempt to connect to WiFi
         if (WiFi.status() != WL_CONNECTED && !connectToWiFi())
         {
@@ -189,6 +195,7 @@ void WeatherStation::loop()
 
             // Try and post the data
             File f = m_dataStore.getReader();
+            f.seek(0);
             bool success = postReadingsFile(&f);
             f.close();
             if (!success)
@@ -424,4 +431,17 @@ void WeatherStation::sleepUntilNextTask()
 
     DEBUG_PRINTF("Going to sleep for %llu microseconds\n", sleepDurationUs);
     goToSleep(sleepDurationUs);
+}
+
+bool WeatherStation::mountFs(uint32_t maxTries)
+{
+    uint32_t tries = 0;
+    bool mounted = false;
+    while ((mounted = LittleFS.begin(true)) == false && tries < maxTries)
+        tries++;
+
+    if (mounted)
+        DEBUG_PRINTF("Filesystem used bytes: %d\n", LittleFS.usedBytes());
+
+    return mounted;
 }
