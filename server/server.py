@@ -4,6 +4,36 @@ import pandas as pd
 import sqlite3
 import struct
 from flask import Flask, request, g, render_template 
+from logging.config import dictConfig
+
+
+dictConfig({
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'default': {
+            'format': '[%(asctime)s] %(levelname)s in %(module)s: %(message)s',
+        }
+    },
+    'handlers': {
+        'wsgi': {
+            'class': 'logging.StreamHandler',
+            'stream': 'ext://flask.logging.wsgi_errors_stream',
+            'formatter': 'default'
+        },
+        'file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': 'app.log',
+            'maxBytes': 1024 * 1024 * 10,  # 10 MB
+            'backupCount': 5,
+            'formatter': 'default'
+        }
+    },
+    'root': {
+        'level': 'INFO',
+        'handlers': ['wsgi', 'file']
+    }
+})
 
 app = Flask(__name__)
 app.template_folder = "static"
@@ -63,6 +93,7 @@ def parse_binary_data(_bytes):
 
 @app.get("/")
 def dashboard():
+    app.logger.info("Dashboard")
     return render_template("index.html")
 
 @app.get("/test")
@@ -72,24 +103,28 @@ def test():
 
 @app.get("/timestamp")
 def timestamp():
+    app.logger.info("Timestamp")
     return str(int(time.time())), 200
 
 
 @app.post("/batch-submit")
 def batch_submit():
+    app.logger.info("Begin batch submit")
     with app.app_context():
         db = get_db()
         cur = db.cursor()
         data = request.get_json(True)
-        print(data)
+        app.logger.info(f"Request json: {data}")
         entries = data.get("entries", None)
         try:
             if entries is None:
+                app.logger.error("Entries are missing")
                 raise Exception("entries are missing")
 
             tupled = [(e["timestamp"], e["temp1"], e["temp2"], e["pressure"], e["humidity"], e["heat_index"], e["battery"]) for e in entries]
             cur.executemany("INSERT INTO weather VALUES(?, ?, ?, ?, ?, ?, ?)", tupled)
         except Exception as e:
+            app.logger.error(f"Bad data: {e}")
             # Assuming that the above code fails because of a bad input
             return f"Bad data: {e}", 400
 
@@ -98,15 +133,18 @@ def batch_submit():
 
 @app.post("/binary-submit")
 def binary_submit():
+    app.logger.info("Begin binary submit")
     with app.app_context():
         db = get_db()
         cur = db.cursor()
         data = request.get_data()
+        app.logger.info(f"Request data length: {len(data)}")
         try:
             entries = parse_binary_data(data)
-            print(entries)
+            app.logger.info(f"Parsed entries: {entries}")
             cur.executemany("INSERT INTO weather VALUES(?, ?, ?, ?, ?, ?, ?)", entries)
         except Exception as e:
+            app.logger.error(f"Bad data: {e}")
             return f"Bad data: {e}", 400
 
         db.commit()
@@ -116,6 +154,7 @@ def binary_submit():
 @app.get("/get-latest")
 def get_latest():
     n = request.args.get("n", default=5, type=int)
+    app.logger.info(f"Begin get latest with n={n}")
     with app.app_context():
         db = get_db()
         cur = db.cursor()
@@ -130,9 +169,11 @@ def get_latest():
             "battery": row[6]
         } for row in cur.execute("SELECT * FROM weather ORDER BY timestamp DESC LIMIT ?", (n, ))]
 
+        app.logger.info(f"Results length: {len(response)}")
         return response, 200
 
 
 
 if __name__ == "__main__":
+    app.logger.info("Starting server...")
     app.run("0.0.0.0", 4567, debug=True)
