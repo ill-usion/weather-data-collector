@@ -117,7 +117,7 @@ public:
     /// @return File writer
     File getWriter()
     {
-        return LittleFS.open(m_filename, FILE_WRITE, true);
+        return LittleFS.open(m_filename, FILE_APPEND, true);
     }
 
 private:
