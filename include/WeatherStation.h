@@ -8,6 +8,9 @@
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
+#include "esp_wifi.h"
+
+#include "esp_bt.h"
 
 // Sensor includes
 #include <Wire.h>
