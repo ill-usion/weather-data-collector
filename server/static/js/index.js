@@ -27,7 +27,7 @@ function calcSoc(v) {
 document.addEventListener("DOMContentLoaded", async () => {
     var latestData = await fetchLatest(readings_per_hour * 24);
     latestData = latestData.reverse();
-    var latestDataH = latestData.slice(latestData.length - readings_per_hour * 1, -1);
+    var latestDataH = latestData.slice(latestData.length - readings_per_hour * 1, latestData.length);
 
     new Chart(canvLatestH, {
         type: "line",
