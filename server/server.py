@@ -172,7 +172,18 @@ def get_latest():
         app.logger.info(f"Results length: {len(response)}")
         return response, 200
 
-
+@app.get("/export-csv")
+def export_csv():
+    app.logger.info("Begin export csv")
+    with app.app_context():
+        db = get_db()
+        df = pd.read_sql_query("SELECT * FROM weather", db)
+        app.logger.info(f"Number of rows in dataframe: {len(df)}")
+        csv_data = df.to_csv(index=False)
+        return csv_data, 200, {
+            "Content-Type": "text/csv",
+            "Content-Disposition": "attachment; filename=weather_data.csv"
+        }
 
 if __name__ == "__main__":
     app.logger.info("Starting server...")
