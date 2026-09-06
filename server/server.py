@@ -91,6 +91,20 @@ def parse_binary_data(_bytes):
 
     return entries
 
+
+def remove_duplicate_entries(entries):
+    seen = set()
+    keep = []
+
+    for entry in entries:
+        t = entry[0]
+        if t not in seen:
+            seen.add(t)
+            keep.append(entry)
+    
+    return keep
+
+
 @app.get("/")
 def dashboard():
     app.logger.info("Dashboard")
@@ -141,6 +155,7 @@ def binary_submit():
         app.logger.info(f"Request data length: {len(data)}")
         try:
             entries = parse_binary_data(data)
+            entries = remove_duplicate_entries(entries)
             app.logger.info(f"Parsed entries: {entries}")
             cur.executemany("INSERT INTO weather VALUES(?, ?, ?, ?, ?, ?, ?)", entries)
         except Exception as e:
